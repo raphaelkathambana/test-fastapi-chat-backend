@@ -95,7 +95,8 @@ class ChatClient:
         try:
             response = requests.get(
                 f"{self.base_url}/api/chat/messages",
-                params={"token": self.token, "limit": 20},
+                params={"limit": 20},
+                headers={"Authorization": f"Bearer {self.token}"},
                 timeout=5
             )
             if response.status_code == 200:
