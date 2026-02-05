@@ -13,7 +13,7 @@ import requests
 
 
 class ChatClient:
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = "http://127.0.0.1:8000"):
         self.base_url = base_url
         self.ws_url = base_url.replace("http", "ws")
         self.token: Optional[str] = None
@@ -95,7 +95,8 @@ class ChatClient:
         try:
             response = requests.get(
                 f"{self.base_url}/api/chat/messages",
-                params={"token": self.token, "limit": 20},
+                params={"limit": 20},
+                headers={"Authorization": f"Bearer {self.token}"},
                 timeout=5
             )
             if response.status_code == 200:
