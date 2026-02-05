@@ -4,7 +4,7 @@ A real-time chat application built with FastAPI featuring end-to-end encryption,
 
 ## Features
 
-- 🔐 **End-to-End Encryption**: All messages are encrypted before storage using Fernet symmetric encryption
+- 🔐 **End-to-End Encryption**: All messages are encrypted before storage using Fernet (AES-128-CBC with HMAC authentication)
 - 💬 **Real-time Chat**: WebSocket-based communication for instant messaging
 - 🔒 **Authentication**: JWT-based user authentication and authorization
 - 💾 **Database Persistence**: Messages stored in PostgreSQL database
@@ -172,8 +172,8 @@ To test the chat functionality:
 
 1. **Password Hashing**: User passwords are hashed using bcrypt
 2. **JWT Authentication**: Secure token-based authentication
-3. **Message Encryption**: All messages encrypted with Fernet (AES-128 in CBC mode)
-4. **CORS Configuration**: Configurable CORS middleware for production
+3. **Message Encryption**: All messages encrypted with Fernet (AES-128-CBC with HMAC authentication)
+4. **CORS Configuration**: Configurable CORS middleware (restrict origins in production)
 
 ## Development
 

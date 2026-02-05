@@ -10,9 +10,11 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="FastAPI Chat Backend", version="1.0.0")
 
 # Configure CORS
+# WARNING: In production, replace allow_origins=["*"] with specific origins
+# Example: allow_origins=["https://yourdomain.com"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify allowed origins
+    allow_origins=["*"],  # TODO: Configure with specific origins in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

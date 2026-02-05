@@ -15,7 +15,6 @@ print("""
 
 import sys
 import os
-sys.path.insert(0, '/home/runner/work/test-fastapi-chat-backend/test-fastapi-chat-backend')
 
 # Override database URL to use SQLite
 os.environ['DATABASE_URL'] = 'sqlite:///./test_chat.db'
