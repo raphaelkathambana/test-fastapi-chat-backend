@@ -45,7 +45,7 @@ class Settings(BaseSettings):
 def get_settings():
     """Get cached settings instance."""
     try:
-        return Settings()
+        return Settings()  # type: ignore
     except Exception as e:
         print("\n" + "="*70)
         print("ERROR: Failed to load configuration!")
