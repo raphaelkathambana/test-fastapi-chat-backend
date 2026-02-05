@@ -41,6 +41,9 @@ ENV/
 *.db
 *.sqlite3
 
+# Docker
+docker-compose.override.yml
+
 # Logs
 *.log
 
