@@ -1,0 +1,48 @@
+erDiagram
+    users ||--o{ comments : "creates"
+    users ||--o{ notifications : "receives"
+    users ||--o{ messages : "sends"
+    vehicles ||--o{ comments : "has"
+    comments ||--o{ notifications : "triggers"
+
+    users {
+        int id PK "Primary Key"
+        varchar username UK "Unique, 3-50 chars"
+        varchar hashed_password "bcrypt hashed"
+        timestamp created_at "Account creation time"
+    }
+
+    vehicles {
+        int id PK "Primary Key"
+        varchar vin UK "Vehicle Identification Number (17 chars)"
+        varchar make "e.g., Toyota, Honda"
+        varchar model "e.g., Camry, Accord"
+        int year "1900-current"
+        enum status "VehicleStatus enum"
+        timestamp created_at "Record creation time"
+        timestamp updated_at "Last update time"
+    }
+
+    comments {
+        int id PK "Primary Key"
+        int vehicle_id FK "References vehicles(id)"
+        enum section "SectionType enum"
+        int user_id FK "References users(id)"
+        text content "Encrypted comment text"
+        timestamp created_at "Comment creation time"
+    }
+
+    notifications {
+        int id PK "Primary Key"
+        int recipient_id FK "References users(id)"
+        int comment_id FK "References comments(id)"
+        boolean is_read "Read status"
+        timestamp created_at "Notification creation time"
+    }
+
+    messages {
+        int id PK "Primary Key (Legacy)"
+        int user_id FK "References users(id)"
+        text content "Encrypted message text"
+        timestamp created_at "Message creation time"
+    }
