@@ -8,6 +8,10 @@ from app.routes import auth, chat, dealership
 from app.websocket import handle_websocket
 from app.config import get_settings
 
+# Import event handlers to register them with the event bus
+# This must happen before the app starts handling requests
+from app.events.handlers import notifications, websocket_broadcast  # noqa: F401
+
 # Get settings
 settings = get_settings()
 

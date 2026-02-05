@@ -1,12 +1,12 @@
 from fastapi import WebSocket, WebSocketDisconnect
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
-from app.models.models import Comment, User, Vehicle, Notification, SectionType
+from app.models.models import Comment, User, Vehicle, SectionType
 from app.utils.encryption import encrypt_message, decrypt_message
 from app.utils.auth import decode_token
+from app.events import event_bus
 import json
-import re
 
 
 class ConnectionManager:
@@ -146,42 +146,19 @@ async def handle_websocket(websocket: WebSocket, token: str, vehicle_id: Optiona
                     db.commit()
                     db.refresh(new_comment)
 
-                    # Parse @mentions and create notifications
-                    mentioned_users = extract_mentions(content)
-                    for mentioned_username in mentioned_users:
-                        mentioned_user = db.query(User).filter(User.username == mentioned_username).first()
-                        if mentioned_user and mentioned_user.id != user.id:
-                            notification = Notification(
-                                recipient_id=mentioned_user.id,
-                                comment_id=new_comment.id,
-                                is_read=False
-                            )
-                            db.add(notification)
-
-                            # Send real-time notification if user is connected
-                            await manager.send_personal_message(json.dumps({
-                                "type": "mention",
-                                "message": f"You were mentioned by {username} in {vehicle.make} {vehicle.model} - {section}",
-                                "comment_id": new_comment.id,
-                                "vehicle_id": vehicle_id,
-                                "section": section
-                            }), mentioned_username)
-
-                    if mentioned_users:
-                        db.commit()
-
-                    # Broadcast comment to all users in the room
-                    broadcast_data = json.dumps({
-                        "type": "comment",
-                        "comment_id": new_comment.id,
-                        "username": username,
-                        "content": content,
-                        "vehicle_id": vehicle_id,
-                        "section": section,
-                        "timestamp": new_comment.created_at.isoformat(),
-                        "mentions": mentioned_users
+                    # Emit event - let handlers process it
+                    # This decouples WebSocket logic from notifications and broadcasts
+                    await event_bus.emit('comment.created', {
+                        'comment_id': new_comment.id,
+                        'author_id': user.id,
+                        'username': username,
+                        'content': content,  # Pass decrypted content for mention extraction
+                        'vehicle_id': vehicle_id,
+                        'vehicle_make': vehicle.make,
+                        'vehicle_model': vehicle.model,
+                        'section': section,
+                        'timestamp': new_comment.created_at.isoformat()
                     })
-                    await manager.broadcast_to_room(room_id, broadcast_data)
 
     except WebSocketDisconnect:
         if username:
@@ -196,10 +173,3 @@ async def handle_websocket(websocket: WebSocket, token: str, vehicle_id: Optiona
             manager.disconnect(username)
     finally:
         db.close()
-
-
-def extract_mentions(content: str) -> List[str]:
-    """Extract @username mentions from content."""
-    pattern = r'@([a-zA-Z0-9_-]+)'
-    mentions = re.findall(pattern, content)
-    return list(set(mentions))  # Remove duplicates

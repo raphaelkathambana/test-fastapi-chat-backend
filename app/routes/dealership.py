@@ -10,7 +10,7 @@ from app.models.schemas import (
 )
 from app.routes.chat import get_current_user
 from app.utils.encryption import encrypt_message, decrypt_message
-import re
+from app.events.handlers.notifications import extract_mentions
 
 router = APIRouter()
 
@@ -312,12 +312,3 @@ def mark_all_notifications_read(
     ).update({"is_read": True})
     db.commit()
     return {"status": "success", "message": "All notifications marked as read"}
-
-
-# Helper function
-def extract_mentions(content: str) -> List[str]:
-    """Extract @username mentions from content."""
-    # Match @username (alphanumeric, underscore, hyphen)
-    pattern = r'@([a-zA-Z0-9_-]+)'
-    mentions = re.findall(pattern, content)
-    return list(set(mentions))  # Remove duplicates
