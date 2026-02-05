@@ -1,7 +1,8 @@
 from pydantic import BaseModel, field_validator
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 import re
+from app.models.models import VehicleStatus, SectionType
 
 
 class UserCreate(BaseModel):
@@ -68,3 +69,93 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+
+# Vehicle schemas
+class VehicleCreate(BaseModel):
+    vin: str
+    make: str
+    model: str
+    year: int
+
+    @field_validator('vin')
+    @classmethod
+    def validate_vin(cls, v: str) -> str:
+        """Validate VIN format."""
+        v = v.upper().strip()
+        if len(v) != 17:
+            raise ValueError('VIN must be exactly 17 characters')
+        if not re.match(r'^[A-HJ-NPR-Z0-9]{17}$', v):
+            raise ValueError('Invalid VIN format')
+        return v
+
+    @field_validator('year')
+    @classmethod
+    def validate_year(cls, v: int) -> int:
+        """Validate vehicle year."""
+        if v < 1900 or v > datetime.now().year + 1:
+            raise ValueError(f'Year must be between 1900 and {datetime.now().year + 1}')
+        return v
+
+
+class VehicleUpdate(BaseModel):
+    status: Optional[VehicleStatus] = None
+    make: Optional[str] = None
+    model: Optional[str] = None
+    year: Optional[int] = None
+
+
+class VehicleResponse(BaseModel):
+    id: int
+    vin: str
+    make: str
+    model: str
+    year: int
+    status: VehicleStatus
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Comment schemas
+class CommentCreate(BaseModel):
+    vehicle_id: int
+    section: SectionType
+    content: str
+
+
+class CommentResponse(BaseModel):
+    id: int
+    vehicle_id: int
+    section: SectionType
+    user_id: int
+    username: str
+    content: str
+    created_at: datetime
+    mentioned_users: Optional[List[str]] = []
+
+    class Config:
+        from_attributes = True
+
+
+# Notification schemas
+class NotificationResponse(BaseModel):
+    id: int
+    recipient_id: int
+    comment_id: int
+    is_read: bool
+    created_at: datetime
+    comment: CommentResponse
+
+    class Config:
+        from_attributes = True
+
+
+# Section info schema
+class SectionInfo(BaseModel):
+    name: SectionType
+    display_name: str
+    category: str
+    order: int
