@@ -311,6 +311,41 @@ notifications
 
 ## Troubleshooting
 
+### Database Migration Issues
+
+**Error: "type 'vehiclestatus' already exists" or "relation 'users' already exists"**
+
+This happens when tables were created by `Base.metadata.create_all()` before running Alembic migrations.
+
+**Solution 1: Fix existing database (RECOMMENDED)**
+```bash
+python fix_migrations.py
+```
+This script will:
+- Detect your current database state
+- Stamp the database at the correct migration revision
+- Preserve your existing data
+
+**Solution 2: Reset database (DESTRUCTIVE - loses all data)**
+```bash
+python reset_database.py
+```
+This will drop everything and start fresh.
+
+**Solution 3: Manual fix**
+```bash
+# Check current state
+alembic current
+
+# If no output, stamp to current revision
+alembic stamp 002
+
+# If stamped at wrong revision
+alembic stamp 002
+```
+
+### General Issues
+
 **Connection refused to server**:
 - Ensure server is running: `python -m uvicorn app.main:app --reload`
 - Check server logs for errors
