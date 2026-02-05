@@ -36,14 +36,26 @@ class ChatClient:
         try:
             response = requests.post(
                 f"{self.base_url}/api/auth/register",
-                json={"username": username, "password": password}
+                json={"username": username, "password": password},
+                timeout=5
             )
             if response.status_code == 201:
                 print(f"✓ User '{username}' registered successfully!")
                 return True
             else:
-                print(f"✗ Registration failed: {response.json().get('detail', 'Unknown error')}")
+                try:
+                    error_detail = response.json().get('detail', 'Unknown error')
+                except Exception:
+                    error_detail = f"HTTP {response.status_code}: {response.text[:100]}"
+                print(f"✗ Registration failed: {error_detail}")
                 return False
+        except requests.exceptions.ConnectionError:
+            print(f"✗ Error: Cannot connect to server at {self.base_url}")
+            print("   Make sure the server is running: python -m uvicorn app.main:app --reload")
+            return False
+        except requests.exceptions.Timeout:
+            print(f"✗ Error: Connection timeout to {self.base_url}")
+            return False
         except Exception as e:
             print(f"✗ Error: {e}")
             return False
@@ -52,7 +64,8 @@ class ChatClient:
         try:
             response = requests.post(
                 f"{self.base_url}/api/auth/login",
-                json={"username": username, "password": password}
+                json={"username": username, "password": password},
+                timeout=5
             )
             if response.status_code == 200:
                 data = response.json()
@@ -61,8 +74,19 @@ class ChatClient:
                 print(f"✓ Logged in as '{username}'")
                 return True
             else:
-                print(f"✗ Login failed: {response.json().get('detail', 'Unknown error')}")
+                try:
+                    error_detail = response.json().get('detail', 'Unknown error')
+                except Exception:
+                    error_detail = f"HTTP {response.status_code}: {response.text[:100]}"
+                print(f"✗ Login failed: {error_detail}")
                 return False
+        except requests.exceptions.ConnectionError:
+            print(f"✗ Error: Cannot connect to server at {self.base_url}")
+            print("   Make sure the server is running: python -m uvicorn app.main:app --reload")
+            return False
+        except requests.exceptions.Timeout:
+            print(f"✗ Error: Connection timeout to {self.base_url}")
+            return False
         except Exception as e:
             print(f"✗ Error: {e}")
             return False
@@ -71,7 +95,8 @@ class ChatClient:
         try:
             response = requests.get(
                 f"{self.base_url}/api/chat/messages",
-                params={"token": self.token, "limit": 20}
+                params={"token": self.token, "limit": 20},
+                timeout=5
             )
             if response.status_code == 200:
                 messages = response.json()
@@ -83,7 +108,15 @@ class ChatClient:
                     print(f"[{timestamp}] {msg['username']}: {msg['content']}")
                 print("-" * 60)
             else:
-                print("✗ Failed to fetch message history")
+                try:
+                    error_detail = response.json().get('detail', 'Unknown error')
+                except Exception:
+                    error_detail = f"HTTP {response.status_code}"
+                print(f"✗ Failed to fetch message history: {error_detail}")
+        except requests.exceptions.ConnectionError:
+            print(f"✗ Error: Cannot connect to server at {self.base_url}")
+        except requests.exceptions.Timeout:
+            print(f"✗ Error: Connection timeout")
         except Exception as e:
             print(f"✗ Error: {e}")
     
