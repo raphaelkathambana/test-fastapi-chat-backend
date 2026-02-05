@@ -1,7 +1,18 @@
-from passlib.context import CryptContext
-from jose import JWTError, jwt
-from datetime import datetime, timedelta, timezone
+import sys
+import io
 from typing import Optional
+from datetime import datetime, timedelta, timezone
+
+# Suppress bcrypt version warning during passlib import
+# This is a known compatibility issue between passlib 1.7.4 and bcrypt 4.x
+_stderr = sys.stderr
+try:
+    sys.stderr = io.StringIO()
+    from passlib.context import CryptContext
+finally:
+    sys.stderr = _stderr
+
+from jose import JWTError, jwt
 from app.config import get_settings
 from app.models.schemas import TokenData
 
