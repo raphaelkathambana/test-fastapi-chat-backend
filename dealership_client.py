@@ -292,6 +292,10 @@ class DealershipClient:
 
     def show_comments_and_connect(self):
         """Show existing comments and connect to WebSocket."""
+        if self.current_vehicle is None or self.current_section is None:
+            print("✗ Error: No vehicle or section selected")
+            return
+
         self.clear_screen()
         self.print_header()
 
@@ -410,6 +414,10 @@ class DealershipClient:
 
     async def start_chat(self):
         """Start the WebSocket chat."""
+        if self.current_vehicle is None or self.current_section is None:
+            print("✗ Error: No vehicle or section selected")
+            return
+
         try:
             uri = f"{self.ws_url}/ws/chat?token={self.token}&vehicle_id={self.current_vehicle['id']}&section={self.current_section}"
             async with websockets.connect(uri) as websocket:

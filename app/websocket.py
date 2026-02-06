@@ -1,5 +1,5 @@
 from fastapi import WebSocket, WebSocketDisconnect
-from typing import Dict, Optional
+from typing import Dict
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models.models import Comment, User, Vehicle, SectionType
@@ -69,7 +69,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-async def handle_websocket(websocket: WebSocket, token: str, vehicle_id: Optional[int] = None, section: Optional[str] = None):
+async def handle_websocket(websocket: WebSocket, token: str, vehicle_id: int | None = None, section: str | None = None):
     """Handle WebSocket connection for vehicle evaluation comments."""
     db = SessionLocal()
     username = None

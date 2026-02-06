@@ -1,21 +1,22 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Enum as SQLEnum, Boolean
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from datetime import datetime
 from app.database import Base
 import enum
+from typing import List as TypingList
 
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    username: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    comments = relationship("Comment", back_populates="user", foreign_keys="Comment.user_id")
-    notifications = relationship("Notification", back_populates="recipient", foreign_keys="Notification.recipient_id")
+    comments: Mapped[TypingList["Comment"]] = relationship("Comment", back_populates="user", foreign_keys="Comment.user_id")
+    notifications: Mapped[TypingList["Notification"]] = relationship("Notification", back_populates="recipient", foreign_keys="Notification.recipient_id")
 
 
 class VehicleStatus(str, enum.Enum):
@@ -73,47 +74,47 @@ class SectionType(str, enum.Enum):
 class Vehicle(Base):
     __tablename__ = "vehicles"
 
-    id = Column(Integer, primary_key=True, index=True)
-    vin = Column(String(17), unique=True, index=True, nullable=False)  # Vehicle Identification Number
-    make = Column(String(50), nullable=False)  # e.g., Toyota, Honda
-    model = Column(String(50), nullable=False)  # e.g., Camry, Accord
-    year = Column(Integer, nullable=False)
-    status = Column(SQLEnum(VehicleStatus), default=VehicleStatus.PENDING, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    vin: Mapped[str] = mapped_column(String(17), unique=True, index=True, nullable=False)  # Vehicle Identification Number
+    make: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g., Toyota, Honda
+    model: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g., Camry, Accord
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[VehicleStatus] = mapped_column(SQLEnum(VehicleStatus), default=VehicleStatus.PENDING, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    comments = relationship("Comment", back_populates="vehicle")
+    comments: Mapped[TypingList["Comment"]] = relationship("Comment", back_populates="vehicle")
 
 
 class Comment(Base):
     __tablename__ = "comments"
 
-    id = Column(Integer, primary_key=True, index=True)
-    vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=False, index=True)
-    section = Column(SQLEnum(SectionType), nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    content = Column(Text, nullable=False)  # Encrypted content
-    created_at = Column(DateTime, default=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    vehicle_id: Mapped[int] = mapped_column(Integer, ForeignKey("vehicles.id"), nullable=False, index=True)
+    section: Mapped[SectionType] = mapped_column(SQLEnum(SectionType), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)  # Encrypted content
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    vehicle = relationship("Vehicle", back_populates="comments")
-    user = relationship("User", back_populates="comments", foreign_keys=[user_id])
-    notifications = relationship("Notification", back_populates="comment", cascade="all, delete-orphan")
+    vehicle: Mapped["Vehicle"] = relationship("Vehicle", back_populates="comments")
+    user: Mapped["User"] = relationship("User", back_populates="comments", foreign_keys=[user_id])
+    notifications: Mapped[TypingList["Notification"]] = relationship("Notification", back_populates="comment", cascade="all, delete-orphan")
 
 
 class Notification(Base):
     __tablename__ = "notifications"
 
-    id = Column(Integer, primary_key=True, index=True)
-    recipient_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    comment_id = Column(Integer, ForeignKey("comments.id"), nullable=False)
-    is_read = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    recipient_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    comment_id: Mapped[int] = mapped_column(Integer, ForeignKey("comments.id"), nullable=False)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    recipient = relationship("User", back_populates="notifications", foreign_keys=[recipient_id])
-    comment = relationship("Comment", back_populates="notifications")
+    recipient: Mapped["User"] = relationship("User", back_populates="notifications", foreign_keys=[recipient_id])
+    comment: Mapped["Comment"] = relationship("Comment", back_populates="notifications")
 
 
 class SectionMetadata(Base):
@@ -131,13 +132,13 @@ class SectionMetadata(Base):
     """
     __tablename__ = "section_metadata"
 
-    section_name = Column(String(50), primary_key=True)  # Must match SectionType enum values
-    display_name = Column(String(100), nullable=False)  # Human-readable name
-    description = Column(Text)  # Detailed description
-    category = Column(String(50), nullable=False)  # Group sections (e.g., "Online Evaluation")
-    order_num = Column(Integer, nullable=False)  # Display order (0 = general, 1+ = sections)
-    icon = Column(String(50))  # Icon name/emoji for UI
-    is_active = Column(Boolean, default=True, nullable=False)  # Hide sections without deleting
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    section_name: Mapped[str] = mapped_column(String(50), primary_key=True)  # Must match SectionType enum values
+    display_name: Mapped[str] = mapped_column(String(100), nullable=False)  # Human-readable name
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)  # Detailed description
+    category: Mapped[str] = mapped_column(String(50), nullable=False)  # Group sections (e.g., "Online Evaluation")
+    order_num: Mapped[int] = mapped_column(Integer, nullable=False)  # Display order (0 = general, 1+ = sections)
+    icon: Mapped[str | None] = mapped_column(String(50), nullable=True)  # Icon name/emoji for UI
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)  # Hide sections without deleting
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

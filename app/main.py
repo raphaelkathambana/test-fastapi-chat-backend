@@ -29,7 +29,7 @@ app = FastAPI(
 
 # Add rate limiting
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 # Configure CORS with specific origins from settings
 app.add_middleware(
@@ -86,7 +86,7 @@ def health_check():
 
 
 @app.websocket("/ws/chat")
-async def websocket_endpoint(websocket: WebSocket, token: str, vehicle_id: int = None, section: str = None):
+async def websocket_endpoint(websocket: WebSocket, token: str, vehicle_id: int | None = None, section: str | None = None):
     """
     WebSocket endpoint for real-time vehicle evaluation comments.
 
