@@ -55,7 +55,7 @@ class ConnectionManager:
                 except Exception:
                     pass
 
-    async def broadcast_to_room(self, room_id: str, message: str, exclude_user: str = None):
+    async def broadcast_to_room(self, room_id: str, message: str, exclude_user: str | None = None):
         """Broadcast a message to all users in a specific room."""
         if room_id in self.rooms:
             for username, connection in list(self.rooms[room_id].items()):
@@ -82,14 +82,16 @@ async def handle_websocket(websocket: WebSocket, token: str, vehicle_id: int | N
             await websocket.close(code=1008, reason="Invalid token")
             return
 
-        user = db.query(User).filter(User.username == token_data.username).first()
+        user = db.query(User).filter(
+            User.username == token_data.username).first()
         if user is None:
             await websocket.close(code=1008, reason="User not found")
             return
 
         # Validate vehicle_id and section if provided
         if vehicle_id is not None:
-            vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+            vehicle = db.query(Vehicle).filter(
+                Vehicle.id == vehicle_id).first()
             if not vehicle:
                 await websocket.close(code=1008, reason="Vehicle not found")
                 return
