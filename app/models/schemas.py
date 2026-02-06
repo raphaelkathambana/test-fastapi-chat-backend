@@ -140,7 +140,14 @@ class NotificationResponse(BaseModel):
 
 # Section info schema
 class SectionInfo(BaseModel):
-    name: SectionType
-    display_name: str
+    """Section information with metadata."""
+    section_name: str  # Enum value (e.g., "tire", "general")
+    display_name: str  # Human-readable (e.g., "Tire Evaluation")
+    description: Optional[str] = None
     category: str
-    order: int
+    order_num: int
+    icon: Optional[str] = None
+    is_active: bool = True
+
+    class Config:
+        from_attributes = True

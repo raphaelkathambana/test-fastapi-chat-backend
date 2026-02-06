@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
-from app.models.models import User, Vehicle, Comment, Notification, SectionType, VehicleStatus
+from app.models.models import User, Vehicle, Comment, Notification, SectionType, VehicleStatus, SectionMetadata
 from app.models.schemas import (
     VehicleCreate, VehicleUpdate, VehicleResponse,
     CommentCreate, CommentResponse,
@@ -103,40 +103,26 @@ def update_vehicle(
 
 # Section endpoints
 @router.get("/sections", response_model=List[SectionInfo])
-def list_sections(current_user: User = Depends(get_current_user)):
-    """List all evaluation sections with metadata."""
-    sections = [
-        SectionInfo(
-            name=SectionType.TIRE,
-            display_name="Tire Evaluation",
-            category="Online Evaluation",
-            order=1
-        ),
-        SectionInfo(
-            name=SectionType.WARRANTY,
-            display_name="Warranty",
-            category="Online Evaluation",
-            order=2
-        ),
-        SectionInfo(
-            name=SectionType.ACCIDENT_DAMAGES,
-            display_name="Accident & Damages",
-            category="Online Evaluation",
-            order=3
-        ),
-        SectionInfo(
-            name=SectionType.PAINT,
-            display_name="Paint Inspection",
-            category="Inspection",
-            order=4
-        ),
-        SectionInfo(
-            name=SectionType.PREVIOUS_OWNERS,
-            display_name="Previous Owners",
-            category="Inspection",
-            order=5
-        )
-    ]
+def list_sections(
+    include_inactive: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    List all evaluation sections with metadata from database.
+
+    Hybrid approach: Section enum in comments table (fast queries),
+    metadata in separate table (flexible, no migrations needed for updates).
+
+    Args:
+        include_inactive: If True, includes inactive/hidden sections
+    """
+    query = db.query(SectionMetadata).order_by(SectionMetadata.order_num)
+
+    if not include_inactive:
+        query = query.filter(SectionMetadata.is_active == True)
+
+    sections = query.all()
     return sections
 
 

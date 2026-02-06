@@ -44,15 +44,14 @@ class DealershipClient:
         print("=" * 70)
 
     def get_section_display_name(self, section_name: str) -> str:
-        """Get human-readable section name."""
-        section_map = {
-            "tire": "Tire Evaluation",
-            "warranty": "Warranty",
-            "accident_damages": "Accident & Damages",
-            "paint": "Paint Inspection",
-            "previous_owners": "Previous Owners"
-        }
-        return section_map.get(section_name, section_name)
+        """Get human-readable section name from cached sections."""
+        if self.sections:
+            for section in self.sections:
+                if section.get('section_name') == section_name:
+                    icon = section.get('icon', '')
+                    display = section.get('display_name', section_name)
+                    return f"{icon} {display}" if icon else display
+        return section_name.replace('_', ' ').title()
 
     def register(self, username: str, password: str) -> bool:
         try:
@@ -249,13 +248,24 @@ class DealershipClient:
             input("\nPress Enter to continue...")
             return
 
-        print("\n--- Evaluation Sections ---")
+        print("\n--- Comments & Evaluation Sections ---")
+        print("\nTip: Start with General Comments for overall vehicle notes!")
+        print("Then dive into specific sections for detailed evaluation.")
+        print("-" * 70)
+
         current_category = None
         for section in sections:
             if section['category'] != current_category:
                 current_category = section['category']
                 print(f"\n{current_category}:")
-            print(f"  {section['order']}. {section['display_name']}")
+
+            icon = section.get('icon', '')
+            display = f"{icon} {section['display_name']}" if icon else section['display_name']
+            print(f"  {section['order_num']}. {display}")
+
+            # Show description for general section
+            if section['section_name'] == 'general' and section.get('description'):
+                print(f"      ({section['description']})")
 
         print("\n0. Back to vehicles")
 
@@ -267,9 +277,9 @@ class DealershipClient:
 
         try:
             section_num = int(choice)
-            selected_section = next((s for s in sections if s['order'] == section_num), None)
+            selected_section = next((s for s in sections if s['order_num'] == section_num), None)
             if selected_section:
-                self.current_section = selected_section['name']
+                self.current_section = selected_section['section_name']
                 self.show_comments_and_connect()
             else:
                 print("Invalid selection")
