@@ -20,7 +20,7 @@ A secure, production-ready real-time chat application built with FastAPI featuri
 
 ## Project Structure
 
-```
+```text
 .
 ├── app/
 │   ├── config.py          # Configuration with separate DB credentials
@@ -86,6 +86,7 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 ```
 
 Update your `.env` file:
+
 ```env
 DATABASE_HOST=localhost
 DATABASE_PORT=5432
@@ -139,17 +140,20 @@ python client.py
 ```
 
 Follow the prompts to:
+
 1. Register a new user or login
 2. View message history
 3. Start chatting in real-time
 
 **Note:** Password requirements:
+
 - Minimum 8 characters
 - At least one uppercase letter
 - At least one lowercase letter
 - At least one digit
 
 **Client Commands**:
+
 - `/quit`, `/exit`, `/q` - Exit the chat
 - `/help` - Show available commands
 
@@ -165,6 +169,7 @@ Follow the prompts to:
 ### Authentication
 
 **Register a new user:**
+
 ```bash
 POST /api/auth/register
 Content-Type: application/json
@@ -178,6 +183,7 @@ Content-Type: application/json
 Rate limit: 5 requests per minute per IP
 
 **Login and get access token:**
+
 ```bash
 POST /api/auth/login
 Content-Type: application/json
@@ -191,6 +197,7 @@ Content-Type: application/json
 Rate limit: 10 requests per minute per IP
 
 Response:
+
 ```json
 {
   "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
@@ -201,17 +208,20 @@ Response:
 ### Chat
 
 **Get message history:**
+
 ```bash
 GET /api/chat/messages?limit=50
 Authorization: Bearer <access_token>
 ```
 
 **WebSocket chat:**
-```
+
+```text
 WS /ws/chat?token=<access_token>
 ```
 
 Send messages:
+
 ```json
 {
   "type": "message",
@@ -220,6 +230,7 @@ Send messages:
 ```
 
 Receive messages:
+
 ```json
 {
   "type": "message",
@@ -232,24 +243,29 @@ Receive messages:
 ## Security Features
 
 ### Authentication & Authorization
+
 - JWT tokens with 30-minute expiration
 - bcrypt password hashing (12 rounds)
 - Bearer token authentication (Authorization header)
 
 ### Input Validation
+
 - **Username**: 3-50 characters, alphanumeric + underscore/hyphen only
 - **Password**: 8-128 characters, must contain uppercase, lowercase, and digit
 
 ### Rate Limiting
+
 - Registration: 5 attempts per minute per IP
 - Login: 10 attempts per minute per IP
 
 ### Data Protection
+
 - All messages encrypted at rest (Fernet/AES-128)
 - No passwords stored in plain text
 - Separate database credentials (not in connection string)
 
 ### Network Security
+
 - Configurable CORS origins (no wildcard in production)
 - HTTPS recommended for production
 - Health check endpoint for monitoring
@@ -259,21 +275,25 @@ Receive messages:
 This project uses Alembic for database migrations.
 
 **Create a new migration:**
+
 ```bash
 alembic revision --autogenerate -m "Description of changes"
 ```
 
 **Apply migrations:**
+
 ```bash
 alembic upgrade head
 ```
 
 **Rollback last migration:**
+
 ```bash
 alembic downgrade -1
 ```
 
 **View migration history:**
+
 ```bash
 alembic history
 ```
@@ -283,21 +303,25 @@ alembic history
 The included `docker-compose.yml` provides a PostgreSQL container for development.
 
 **Start:**
+
 ```bash
 docker-compose up -d
 ```
 
 **Stop:**
+
 ```bash
 docker-compose down
 ```
 
 **Stop and remove data:**
+
 ```bash
 docker-compose down -v
 ```
 
 **View logs:**
+
 ```bash
 docker-compose logs -f postgres
 ```
@@ -324,17 +348,20 @@ python test_app.py
 ### Required Steps
 
 1. **Set strong secrets in .env**:
+
    ```bash
    SECRET_KEY=$(openssl rand -hex 32)
    ENCRYPTION_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
    ```
 
 2. **Configure CORS for your domain**:
+
    ```env
    CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
    ```
 
 3. **Use a managed PostgreSQL database**:
+
    ```env
    DATABASE_HOST=your-db-host.example.com
    DATABASE_USER=your_db_user
@@ -343,6 +370,7 @@ python test_app.py
    ```
 
 4. **Run with production ASGI server**:
+
    ```bash
    uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
    ```
@@ -350,6 +378,7 @@ python test_app.py
 5. **Setup HTTPS**: Use nginx or similar as a reverse proxy with SSL certificates
 
 6. **Apply database migrations**:
+
    ```bash
    alembic upgrade head
    ```
@@ -370,25 +399,30 @@ python test_app.py
 ## Troubleshooting
 
 **Error: "Failed to load configuration!"**
+
 - Make sure you created `.env` file from `.env.example`
 - Verify all required variables are set
 
 **Error: "Connection refused" to PostgreSQL**
+
 - Start Docker: `docker-compose up -d`
 - Check status: `docker-compose ps`
 - View logs: `docker-compose logs postgres`
 
 **Error: "Invalid token" when connecting**
+
 - Token may have expired (30 minutes)
 - Login again to get a new token
 
 **Rate limit exceeded**
+
 - Wait 60 seconds
 - This is a security feature to prevent brute force attacks
 
 ## Contributing
 
 Contributions are welcome! Please ensure:
+
 1. All tests pass
 2. Code follows existing style
 3. Security best practices are maintained
