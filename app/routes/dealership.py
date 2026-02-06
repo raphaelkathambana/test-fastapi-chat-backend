@@ -8,7 +8,7 @@ from app.models.schemas import (
     CommentCreate, CommentResponse,
     NotificationResponse, SectionInfo
 )
-from app.routes.chat import get_current_user
+from app.utils.dependencies import get_current_user
 from app.utils.encryption import encrypt_message, decrypt_message
 from app.events.handlers.notifications import extract_mentions
 

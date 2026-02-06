@@ -83,14 +83,3 @@ class Notification(Base):
     recipient = relationship("User", back_populates="notifications", foreign_keys=[recipient_id])
     comment = relationship("Comment", back_populates="notifications")
 
-
-# Keep Message model for backward compatibility (can be removed after migration)
-class Message(Base):
-    __tablename__ = "messages"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    content = Column(Text, nullable=False)  # Encrypted content
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    user = relationship("User")

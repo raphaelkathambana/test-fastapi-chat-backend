@@ -4,7 +4,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.database import engine, Base
-from app.routes import auth, chat, dealership
+from app.routes import auth, dealership
 from app.websocket import handle_websocket
 from app.config import get_settings
 
@@ -42,7 +42,6 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 app.include_router(dealership.router, prefix="/api/dealership", tags=["Dealership"])
 
 

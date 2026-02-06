@@ -2,7 +2,6 @@
 erDiagram
     users ||--o{ comments : "creates"
     users ||--o{ notifications : "receives"
-    users ||--o{ messages : "sends"
     vehicles ||--o{ comments : "has"
     comments ||--o{ notifications : "triggers"
 
@@ -39,13 +38,6 @@ erDiagram
         int comment_id FK "References comments(id)"
         boolean is_read "Read status"
         timestamp created_at "Notification creation time"
-    }
-
-    messages {
-        int id PK "Primary Key (Legacy)"
-        int user_id FK "References users(id)"
-        text content "Encrypted message text"
-        timestamp created_at "Message creation time"
     }
 ```
 
@@ -96,11 +88,6 @@ Inspection Sections (4-5):
    - Each notification links to one comment
    - Cascade: Notifications deleted when comment is deleted
 
-5. **users → messages** (Legacy)
-   - One user can send many messages
-   - Each message belongs to one user
-   - Kept for backward compatibility
-
 ## Indexes
 
 ### Primary Indexes
@@ -108,7 +95,6 @@ Inspection Sections (4-5):
 - `vehicles.id` (Primary Key, Auto-increment)
 - `comments.id` (Primary Key, Auto-increment)
 - `notifications.id` (Primary Key, Auto-increment)
-- `messages.id` (Primary Key, Auto-increment)
 
 ### Unique Indexes
 - `users.username` (Unique constraint)
@@ -120,13 +106,11 @@ Inspection Sections (4-5):
 - `comments.section` (For filtering by section)
 - `notifications.recipient_id` (For user's notifications)
 - `notifications.comment_id` (For comment's notifications)
-- `messages.user_id` (For user's messages)
 
 ## Security Features
 
 ### Encryption
 - `comments.content` - Encrypted using Fernet (symmetric encryption)
-- `messages.content` - Encrypted using Fernet (symmetric encryption)
 - Encryption key stored in environment variable `ENCRYPTION_KEY`
 
 ### Authentication
@@ -212,12 +196,16 @@ WHERE c.id = ?
 
 ### Migration 001 - Initial Schema
 - Created `users` table
-- Created `messages` table
-- Basic chat functionality
+- Created `messages` table (deprecated)
+- Basic authentication
 
 ### Migration 002 - Dealership System
 - Created `vehicles` table with VehicleStatus enum
 - Created `comments` table with SectionType enum
 - Created `notifications` table
 - Added indexes for performance
-- Kept `messages` table for backward compatibility
+
+### Migration 003 - Remove Legacy Messages
+- Dropped `messages` table (replaced by `comments`)
+- Comments are now tied to vehicles and sections
+- Event-driven architecture for notifications

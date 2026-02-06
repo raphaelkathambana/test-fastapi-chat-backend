@@ -1,7 +1,6 @@
 erDiagram
     users ||--o{ comments : "creates"
     users ||--o{ notifications : "receives"
-    users ||--o{ messages : "sends"
     vehicles ||--o{ comments : "has"
     comments ||--o{ notifications : "triggers"
 
@@ -38,11 +37,4 @@ erDiagram
         int comment_id FK "References comments(id)"
         boolean is_read "Read status"
         timestamp created_at "Notification creation time"
-    }
-
-    messages {
-        int id PK "Primary Key (Legacy)"
-        int user_id FK "References users(id)"
-        text content "Encrypted message text"
-        timestamp created_at "Message creation time"
     }
