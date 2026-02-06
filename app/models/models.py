@@ -79,7 +79,7 @@ class Vehicle(Base):
     make: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g., Toyota, Honda
     model: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g., Camry, Accord
     year: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[VehicleStatus] = mapped_column(SQLEnum(VehicleStatus), default=VehicleStatus.PENDING, nullable=False)
+    status: Mapped[VehicleStatus] = mapped_column(SQLEnum(VehicleStatus, values_callable=lambda x: [e.value for e in x]), default=VehicleStatus.PENDING, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -92,7 +92,7 @@ class Comment(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     vehicle_id: Mapped[int] = mapped_column(Integer, ForeignKey("vehicles.id"), nullable=False, index=True)
-    section: Mapped[SectionType] = mapped_column(SQLEnum(SectionType), nullable=False, index=True)
+    section: Mapped[SectionType] = mapped_column(SQLEnum(SectionType, values_callable=lambda x: [e.value for e in x]), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)  # Encrypted content
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

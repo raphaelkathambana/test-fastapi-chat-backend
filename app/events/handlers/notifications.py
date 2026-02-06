@@ -25,6 +25,9 @@ def extract_mentions(content: str) -> List[str]:
     - Underscores (_)
     - Hyphens (-)
 
+    Important: Does NOT match email addresses. The @ symbol must be
+    preceded by whitespace or start of string (not alphanumeric).
+
     Args:
         content: The text content to search for mentions
 
@@ -37,8 +40,13 @@ def extract_mentions(content: str) -> List[str]:
 
         >>> extract_mentions("Check this @john-doe and @jane_smith")
         ['john-doe', 'jane_smith']
+
+        >>> extract_mentions("Email admin@dealer.com but notify @employee2")
+        ['employee2']  # Only @employee2 is matched, not the email
     """
-    pattern = r'@([a-zA-Z0-9_-]+)'
+    # Pattern requires whitespace or start of string before @
+    # This prevents matching email addresses like admin@dealer.com
+    pattern = r'(?:^|(?<=\s))@([a-zA-Z0-9_-]+)'
     mentions = re.findall(pattern, content)
     return list(set(mentions))  # Remove duplicates
 
