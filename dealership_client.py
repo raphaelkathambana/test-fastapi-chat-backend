@@ -358,6 +358,10 @@ class DealershipClient:
 
     async def receive_messages(self):
         """Receive and display messages from WebSocket."""
+        if self.websocket is None:
+            print("✗ Error: WebSocket not connected")
+            return
+
         try:
             async for message in self.websocket:
                 data = json.loads(message)
@@ -382,6 +386,10 @@ class DealershipClient:
 
     async def send_messages(self):
         """Send messages to WebSocket."""
+        if self.websocket is None:
+            print("✗ Error: WebSocket not connected")
+            return
+
         loop = asyncio.get_event_loop()
         while self.running:
             try:
