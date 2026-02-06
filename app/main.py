@@ -4,9 +4,13 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.database import engine, Base
-from app.routes import auth, chat
+from app.routes import auth, dealership
 from app.websocket import handle_websocket
 from app.config import get_settings
+
+# Import event handlers to register them with the event bus
+# This must happen before the app starts handling requests
+from app.events.handlers import notifications, websocket_broadcast  # noqa: F401
 
 # Get settings
 settings = get_settings()
@@ -17,37 +21,61 @@ Base.metadata.create_all(bind=engine)
 # Initialize rate limiter
 limiter = Limiter(key_func=get_remote_address)
 
-app = FastAPI(title="FastAPI Chat Backend", version="1.0.0")
+app = FastAPI(
+    title="Dealership Vehicle Evaluation API",
+    version="2.0.0",
+    description="Vehicle evaluation system with real-time collaboration"
+)
 
 # Add rate limiting
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 # Configure CORS with specific origins from settings
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=["*"],
 )
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
+app.include_router(dealership.router, prefix="/api/dealership", tags=["Dealership"])
 
 
 @app.get("/")
 def read_root():
     return {
-        "message": "FastAPI Chat Backend",
-        "version": "1.0.0",
+        "message": "Dealership Vehicle Evaluation API",
+        "version": "2.0.0",
         "endpoints": {
-            "register": "/api/auth/register",
-            "login": "/api/auth/login",
-            "messages": "/api/chat/messages",
-            "websocket": "/ws/chat"
-        }
+            "auth": {
+                "register": "/api/auth/register",
+                "login": "/api/auth/login"
+            },
+            "vehicles": {
+                "list": "/api/dealership/vehicles",
+                "create": "/api/dealership/vehicles",
+                "get": "/api/dealership/vehicles/{vehicle_id}",
+                "update": "/api/dealership/vehicles/{vehicle_id}"
+            },
+            "sections": {
+                "list": "/api/dealership/sections"
+            },
+            "comments": {
+                "list": "/api/dealership/comments?vehicle_id=X&section=Y",
+                "create": "/api/dealership/comments"
+            },
+            "notifications": {
+                "list": "/api/dealership/notifications",
+                "mark_read": "/api/dealership/notifications/{notification_id}/read",
+                "mark_all_read": "/api/dealership/notifications/read-all"
+            },
+            "websocket": "/ws/chat?token=X&vehicle_id=Y&section=Z"
+        },
+        "docs": "/docs"
     }
 
 
@@ -58,8 +86,16 @@ def health_check():
 
 
 @app.websocket("/ws/chat")
-async def websocket_endpoint(websocket: WebSocket, token: str):
-    await handle_websocket(websocket, token)
+async def websocket_endpoint(websocket: WebSocket, token: str, vehicle_id: int | None = None, section: str | None = None):
+    """
+    WebSocket endpoint for real-time vehicle evaluation comments.
+
+    Parameters:
+    - token: JWT authentication token
+    - vehicle_id: Vehicle ID to connect to
+    - section: Section name (tire, warranty, accident_damages, paint, previous_owners)
+    """
+    await handle_websocket(websocket, token, vehicle_id, section)
 
 
 if __name__ == "__main__":
