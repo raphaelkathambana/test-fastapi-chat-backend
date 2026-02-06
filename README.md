@@ -419,6 +419,19 @@ python test_app.py
 - Wait 60 seconds
 - This is a security feature to prevent brute force attacks
 
+**Client commands (/quit, /back, /help) not responding**
+
+- Known issue with asyncio stdin input blocking
+- Workaround: Type the command and press Enter
+- The command will be processed after pressing Enter
+- Alternative: Use Ctrl+C to interrupt, then use the menu navigation
+
+**Section numbering shows "0" twice in UI**
+
+- Fixed in migration 005
+- Run `alembic upgrade head` to apply the fix
+- After migration, General Comments will be "1" and "0" is reserved for Back navigation
+
 ## Contributing
 
 Contributions are welcome! Please ensure:
