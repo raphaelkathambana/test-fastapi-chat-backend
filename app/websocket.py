@@ -2,7 +2,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from typing import Dict
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
-from app.models.models import Comment, User, Vehicle, SectionType
+from app.models.models import Comment, User, Vehicle, SectionType, Attachment, AttachmentStatus
 from app.utils.encryption import encrypt_message, decrypt_message
 from app.utils.auth import decode_token
 from app.events import event_bus
@@ -134,6 +134,7 @@ async def handle_websocket(websocket: WebSocket, token: str, vehicle_id: int | N
 
             if message_data.get("type") == "comment":
                 content = message_data.get("content", "")
+                attachment_ids = message_data.get("attachment_ids", [])
 
                 if content.strip():
                     # Encrypt and save comment to database
@@ -145,6 +146,26 @@ async def handle_websocket(websocket: WebSocket, token: str, vehicle_id: int | N
                         content=encrypted_content
                     )
                     db.add(new_comment)
+                    db.flush()
+
+                    # Link attachments if provided
+                    linked_attachments = []
+                    for aid in attachment_ids:
+                        attachment = db.query(Attachment).filter(
+                            Attachment.id == aid,
+                            Attachment.uploader_id == user.id,
+                            Attachment.status == AttachmentStatus.READY,
+                            Attachment.comment_id.is_(None),
+                        ).first()
+                        if attachment:
+                            attachment.comment_id = new_comment.id
+                            linked_attachments.append({
+                                'id': attachment.id,
+                                'filename': attachment.filename,
+                                'content_type': attachment.content_type,
+                                'file_size': attachment.file_size,
+                            })
+
                     db.commit()
                     db.refresh(new_comment)
 
@@ -159,7 +180,8 @@ async def handle_websocket(websocket: WebSocket, token: str, vehicle_id: int | N
                         'vehicle_make': vehicle.make,
                         'vehicle_model': vehicle.model,
                         'section': section,
-                        'timestamp': new_comment.created_at.isoformat()
+                        'timestamp': new_comment.created_at.isoformat(),
+                        'attachments': linked_attachments,
                     })
 
     except WebSocketDisconnect:

@@ -1,16 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.database import get_db
-from app.models.models import User, Vehicle, Comment, Notification, SectionType, VehicleStatus, SectionMetadata
+from app.models.models import (
+    User, Vehicle, Comment, Notification, SectionType,
+    VehicleStatus, SectionMetadata, Attachment, AttachmentStatus,
+)
 from app.models.schemas import (
     VehicleCreate, VehicleUpdate, VehicleResponse,
-    CommentCreate, CommentResponse,
-    NotificationResponse, SectionInfo
+    CommentCreate, CommentResponse, AttachmentResponse,
+    NotificationResponse, SectionInfo, CommentCreateWithAttachments,
 )
 from app.utils.dependencies import get_current_user
 from app.utils.encryption import encrypt_message, decrypt_message
 from app.events.handlers.notifications import extract_mentions
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -126,14 +132,38 @@ def list_sections(
     return sections
 
 
+def _build_attachment_responses(attachments: list) -> List[AttachmentResponse]:
+    """Build attachment response list from ORM objects."""
+    return [
+        AttachmentResponse(
+            id=a.id,
+            comment_id=a.comment_id,
+            uploader_id=a.uploader_id,
+            filename=a.filename,
+            content_type=a.content_type,
+            file_size=a.file_size,
+            status=a.status,
+            checksum_sha256=a.checksum_sha256,
+            created_at=a.created_at,
+        )
+        for a in attachments
+        if a.status == AttachmentStatus.READY
+    ]
+
+
 # Comment endpoints
 @router.post("/comments", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
 def create_comment(
-    comment: CommentCreate,
+    comment: CommentCreateWithAttachments,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Create a comment on a vehicle section."""
+    """
+    Create a comment on a vehicle section, optionally with attachments.
+
+    Attachment IDs reference previously uploaded files. Once linked here,
+    the bond is permanent — attachments cannot be moved to another comment.
+    """
     # Check if vehicle exists
     vehicle = db.query(Vehicle).filter(Vehicle.id == comment.vehicle_id).first()
     if not vehicle:
@@ -141,6 +171,31 @@ def create_comment(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vehicle not found"
         )
+
+    # Validate attachment_ids before creating the comment
+    linked_attachments: list[Attachment] = []
+    if comment.attachment_ids:
+        for aid in comment.attachment_ids:
+            attachment = db.query(Attachment).filter(
+                Attachment.id == aid,
+                Attachment.uploader_id == current_user.id,
+                Attachment.status == AttachmentStatus.READY,
+            ).first()
+
+            if not attachment:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Attachment {aid} not found, not ready, or not yours",
+                )
+
+            # Enforce exclusive binding — can't re-link an already-linked attachment
+            if attachment.comment_id is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Attachment {aid} is already linked to comment {attachment.comment_id}",
+                )
+
+            linked_attachments.append(attachment)
 
     # Encrypt the comment content
     encrypted_content = encrypt_message(comment.content)
@@ -153,8 +208,11 @@ def create_comment(
         content=encrypted_content
     )
     db.add(new_comment)
-    db.commit()
-    db.refresh(new_comment)
+    db.flush()  # Get comment ID without committing
+
+    # Link attachments to the comment (the permanent bond)
+    for attachment in linked_attachments:
+        attachment.comment_id = new_comment.id
 
     # Parse @mentions and create notifications
     mentioned_users = extract_mentions(comment.content)
@@ -168,10 +226,10 @@ def create_comment(
             )
             db.add(notification)
 
-    if mentioned_users:
-        db.commit()
+    db.commit()
+    db.refresh(new_comment)
 
-    # Return decrypted comment
+    # Return decrypted comment with attachments
     return CommentResponse(
         id=new_comment.id,
         vehicle_id=new_comment.vehicle_id,
@@ -180,7 +238,8 @@ def create_comment(
         username=current_user.username,
         content=comment.content,
         created_at=new_comment.created_at,
-        mentioned_users=mentioned_users
+        mentioned_users=mentioned_users,
+        attachments=_build_attachment_responses(linked_attachments),
     )
 
 
@@ -210,7 +269,8 @@ def list_comments(
                 username=comment.user.username,
                 content=decrypted_content,
                 created_at=comment.created_at,
-                mentioned_users=mentioned_users
+                mentioned_users=mentioned_users,
+                attachments=_build_attachment_responses(comment.attachments),
             ))
         except Exception:
             # Skip comments that can't be decrypted
@@ -247,7 +307,8 @@ def list_notifications(
                 username=notification.comment.user.username,
                 content=decrypted_content,
                 created_at=notification.comment.created_at,
-                mentioned_users=mentioned_users
+                mentioned_users=mentioned_users,
+                attachments=_build_attachment_responses(notification.comment.attachments),
             )
             result.append(NotificationResponse(
                 id=notification.id,
