@@ -48,7 +48,8 @@ class EventBus:
             if event_name not in self._handlers:
                 self._handlers[event_name] = []
             self._handlers[event_name].append(handler)
-            logger.debug(f"Registered handler {handler.__name__} for event '{event_name}'")
+            logger.debug(
+                f"Registered handler {handler.__name__} for event '{event_name}'")
             return handler
         return decorator
 
@@ -63,7 +64,8 @@ class EventBus:
         if event_name not in self._handlers:
             self._handlers[event_name] = []
         self._handlers[event_name].append(handler)
-        logger.debug(f"Registered handler {handler.__name__} for event '{event_name}'")
+        logger.debug(
+            f"Registered handler {handler.__name__} for event '{event_name}'")
 
     async def emit(self, event_name: str, data: Any = None):
         """
@@ -88,7 +90,8 @@ class EventBus:
             return
 
         handlers = self._handlers[event_name]
-        logger.debug(f"Emitting event '{event_name}' to {len(handlers)} handler(s)")
+        logger.debug(
+            f"Emitting event '{event_name}' to {len(handlers)} handler(s)")
 
         for handler in handlers:
             try:
@@ -107,11 +110,12 @@ class EventBus:
         if event_name in self._handlers:
             try:
                 self._handlers[event_name].remove(handler)
-                logger.debug(f"Removed handler {handler.__name__} from event '{event_name}'")
+                logger.debug(
+                    f"Removed handler {handler.__name__} from event '{event_name}'")
             except ValueError:
                 pass
 
-    def clear_handlers(self, event_name: str = None):
+    def clear_handlers(self, event_name: str | None = None):
         """
         Clear handlers for a specific event or all events.
 
