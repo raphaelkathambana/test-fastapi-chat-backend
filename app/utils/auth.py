@@ -1,3 +1,6 @@
+from app.models.schemas import TokenData
+from app.config import get_settings
+from jose import JWTError, jwt
 import sys
 import io
 from typing import Optional
@@ -12,9 +15,6 @@ try:
 finally:
     sys.stderr = _stderr
 
-from jose import JWTError, jwt
-from app.config import get_settings
-from app.models.schemas import TokenData
 
 settings = get_settings()
 
@@ -39,14 +39,16 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(
+        to_encode, settings.secret_key, algorithm=ALGORITHM)
     return encoded_jwt
 
 
 def decode_token(token: str) -> Optional[TokenData]:
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
+        payload = jwt.decode(token, settings.secret_key,
+                             algorithms=[ALGORITHM])
+        username: str | None = payload.get("sub")
         if username is None:
             return None
         return TokenData(username=username)
