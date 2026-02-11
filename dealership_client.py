@@ -17,6 +17,15 @@ import requests
 SIMPLE_UPLOAD_LIMIT = 5 * 1024 * 1024  # 5MB — matches server limit
 CHUNK_SIZE = 100 * 1024  # 100KB per chunk
 
+# Extension → MIME type map (must match server's ALLOWED_CONTENT_TYPES)
+EXT_TO_CONTENT_TYPE = {
+    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+    '.gif': 'image/gif', '.webp': 'image/webp',
+    '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
+    '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg',
+    '.pdf': 'application/pdf',
+}
+
 
 def format_file_size(size_bytes: int) -> str:
     """Format bytes into human-readable size."""
@@ -203,12 +212,14 @@ class DealershipClient:
     def upload_attachment_simple(self, filepath: str) -> Optional[Dict]:
         """Upload a small file (< 5MB) in a single request."""
         filename = os.path.basename(filepath)
+        ext = os.path.splitext(filename)[1].lower()
+        content_type = EXT_TO_CONTENT_TYPE.get(ext, 'application/octet-stream')
         try:
             with open(filepath, 'rb') as f:
                 response = requests.post(
                     f"{self.base_url}/api/attachments/upload",
                     headers=self._auth_headers(),
-                    files={"file": (filename, f)},
+                    files={"file": (filename, f, content_type)},
                     timeout=30
                 )
             if response.status_code == 201:
@@ -226,16 +237,8 @@ class DealershipClient:
         filename = os.path.basename(filepath)
         file_size = os.path.getsize(filepath)
 
-        # Guess content type from extension
-        ext_map = {
-            '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
-            '.gif': 'image/gif', '.webp': 'image/webp',
-            '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime',
-            '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg',
-            '.pdf': 'application/pdf',
-        }
         ext = os.path.splitext(filename)[1].lower()
-        content_type = ext_map.get(ext, 'application/octet-stream')
+        content_type = EXT_TO_CONTENT_TYPE.get(ext, 'application/octet-stream')
 
         total_chunks = math.ceil(file_size / CHUNK_SIZE)
 
