@@ -626,7 +626,14 @@ class DealershipClient:
                     print(f"\n[NOTIFICATION] {data['message']}")
                     self.unread_notifications += 1
                 elif data["type"] == "attachment_ready":
-                    print(f"\n[UPLOAD READY] {data['filename']} is ready")
+                    att_id = data.get('attachment_id')
+                    fname = data.get('filename')
+                    # Update the pending attachment's status so it gets linked on next comment
+                    for att in self.pending_attachments:
+                        if att['id'] == att_id:
+                            att['status'] = 'ready'
+                            break
+                    print(f"\n[UPLOAD READY] {fname} is ready")
                 print("> ", end="", flush=True)
         except websockets.exceptions.ConnectionClosed:
             print("\n[SYSTEM] Connection closed")
