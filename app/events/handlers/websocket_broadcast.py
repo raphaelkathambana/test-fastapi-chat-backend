@@ -55,7 +55,8 @@ async def broadcast_comment_to_room(data: dict):
             'vehicle_id': vehicle_id,
             'section': section,
             'timestamp': data.get('timestamp'),
-            'mentions': data.get('mentions', [])
+            'mentions': data.get('mentions', []),
+            'attachments': data.get('attachments', []),
         })
 
         # Broadcast to room

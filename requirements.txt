@@ -26,3 +26,6 @@ requests==2.32.3
 
 # File upload handling
 python-multipart==0.0.22
+
+# Async file I/O (for storage backend)
+aiofiles==24.1.0

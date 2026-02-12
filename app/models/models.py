@@ -1,9 +1,9 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Enum as SQLEnum, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Enum as SQLEnum, Boolean, BigInteger
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from datetime import datetime
 from app.database import Base
 import enum
-from typing import List as TypingList
+from typing import List as TypingList, Optional
 
 
 class User(Base):
@@ -17,6 +17,7 @@ class User(Base):
     # Relationships
     comments: Mapped[TypingList["Comment"]] = relationship("Comment", back_populates="user", foreign_keys="Comment.user_id")
     notifications: Mapped[TypingList["Notification"]] = relationship("Notification", back_populates="recipient", foreign_keys="Notification.recipient_id")
+    attachments: Mapped[TypingList["Attachment"]] = relationship("Attachment", back_populates="uploader")
 
 
 class VehicleStatus(str, enum.Enum):
@@ -101,6 +102,7 @@ class Comment(Base):
     vehicle: Mapped["Vehicle"] = relationship("Vehicle", back_populates="comments")
     user: Mapped["User"] = relationship("User", back_populates="comments", foreign_keys=[user_id])
     notifications: Mapped[TypingList["Notification"]] = relationship("Notification", back_populates="comment", cascade="all, delete-orphan")
+    attachments: Mapped[TypingList["Attachment"]] = relationship("Attachment", back_populates="comment", cascade="all, delete-orphan")
 
 
 class Notification(Base):
@@ -142,3 +144,64 @@ class SectionMetadata(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
+class AttachmentStatus(str, enum.Enum):
+    """Lifecycle status of an uploaded attachment."""
+    UPLOADING = "uploading"        # Chunked upload in progress
+    PROCESSING = "processing"      # Validating, encrypting, scanning
+    READY = "ready"                # Available for download
+    QUARANTINED = "quarantined"    # Failed validation/scan
+    ORPHANED = "orphaned"          # Never linked to a comment, pending cleanup
+
+
+class Attachment(Base):
+    """
+    File attachment linked exclusively to a single comment.
+
+    Attachments are independent entities with an exclusive, non-transferable
+    binding to exactly one comment. They may exist temporarily without a
+    comment during the upload phase, but once linked the bond is permanent.
+
+    Encryption: Uses envelope encryption — each file is encrypted with its
+    own AES-256 key, which is then wrapped with the application Fernet key.
+    """
+    __tablename__ = "attachments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)  # UUID4
+    comment_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("comments.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    uploader_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False, index=True
+    )
+    upload_session: Mapped[Optional[str]] = mapped_column(String(36), nullable=True, index=True)
+
+    # File metadata
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)  # Sanitized original name
+    content_type: Mapped[str] = mapped_column(String(100), nullable=False)  # Validated MIME type
+    file_size: Mapped[int] = mapped_column(BigInteger, nullable=False)  # Bytes
+    storage_key: Mapped[str] = mapped_column(String(500), nullable=False, unique=True)  # Path in storage
+    checksum_sha256: Mapped[str] = mapped_column(String(64), nullable=False)  # Hex digest
+
+    # Envelope encryption: per-file AES key wrapped with Fernet master key
+    encrypted_file_key: Mapped[str] = mapped_column(Text, nullable=False)
+
+    # Optional thumbnail for images/video
+    thumbnail_storage_key: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
+    # Lifecycle
+    status: Mapped[AttachmentStatus] = mapped_column(
+        SQLEnum(AttachmentStatus, values_callable=lambda x: [e.value for e in x]),
+        default=AttachmentStatus.UPLOADING, nullable=False, index=True
+    )
+
+    # Chunked upload tracking
+    total_chunks: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    received_chunks: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=0)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    comment: Mapped[Optional["Comment"]] = relationship("Comment", back_populates="attachments")
+    uploader: Mapped["User"] = relationship("User", back_populates="attachments")
