@@ -716,13 +716,22 @@ class DealershipClient:
                         "type": "comment",
                         "content": message,
                     }
-                    # Attach pending files
+                    # Attach pending files — verify status with server to avoid race conditions
                     if self.pending_attachments:
-                        ready = [a for a in self.pending_attachments if a.get('status') == 'ready']
-                        if ready:
-                            payload["attachment_ids"] = [a['id'] for a in ready]
-                            print(f"\n  Attaching {len(ready)} file(s) to comment...")
-                        not_ready = [a for a in self.pending_attachments if a.get('status') != 'ready']
+                        ready_ids = []
+                        not_ready = []
+                        for att in self.pending_attachments:
+                            # Ask the server for the current status instead of trusting local state
+                            server_status = await loop.run_in_executor(
+                                None, self._check_attachment_status, att['id']
+                            )
+                            if server_status == 'ready':
+                                ready_ids.append(att['id'])
+                            else:
+                                not_ready.append(att)
+                        if ready_ids:
+                            payload["attachment_ids"] = ready_ids
+                            print(f"\n  Attaching {len(ready_ids)} file(s) to comment...")
                         if not_ready:
                             print(f"\n  Warning: {len(not_ready)} attachment(s) not ready yet, skipping them.")
                         self.pending_attachments = []
@@ -733,6 +742,20 @@ class DealershipClient:
                 print(f"\n[ERROR] {e}")
                 self.running = False
                 break
+
+    def _check_attachment_status(self, attachment_id: str) -> Optional[str]:
+        """Query the server for the current status of an attachment."""
+        try:
+            resp = requests.get(
+                f"{self.base_url}/api/attachments/{attachment_id}",
+                headers=self._auth_headers(),
+                timeout=5,
+            )
+            if resp.status_code == 200:
+                return resp.json().get('status')
+        except Exception:
+            pass
+        return None
 
     def _resolve_attachment_id(self, prefix: str) -> Optional[str]:
         """Try to find a full attachment ID from a short prefix, using recent comments."""

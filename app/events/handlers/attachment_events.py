@@ -22,8 +22,8 @@ async def broadcast_attachment_ready(data: dict):
     try:
         from app.websocket import manager
 
-        uploader_id = data.get('uploader_id')
-        if not uploader_id:
+        uploader_username = data.get('uploader_username')
+        if not uploader_username:
             return
 
         message = json.dumps({
@@ -34,18 +34,10 @@ async def broadcast_attachment_ready(data: dict):
             'file_size': data.get('file_size'),
         })
 
-        # Send to the uploader if they're connected
-        # We iterate all rooms since we don't know which room they're in
-        for room_id, users in manager.rooms.items():
-            for username, ws in users.items():
-                # We'd need username→user_id mapping; for now broadcast to all rooms
-                # the uploader is in. The client filters by attachment_id.
-                try:
-                    await ws.send_text(message)
-                except Exception:
-                    pass
+        # Send only to the uploader, not to all users
+        await manager.send_personal_message(message, uploader_username)
 
-        logger.debug(f"Broadcasted attachment.ready for {data.get('attachment_id')}")
+        logger.debug(f"Sent attachment.ready to {uploader_username} for {data.get('attachment_id')}")
 
     except Exception as e:
         logger.error(f"Error broadcasting attachment.ready: {e}", exc_info=True)

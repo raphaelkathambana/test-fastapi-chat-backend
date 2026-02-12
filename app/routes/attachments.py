@@ -385,10 +385,15 @@ async def _process_chunked_upload(attachment_id: str) -> None:
 
         logger.info(f"Chunked upload processed: {attachment_id} ({len(plain_data)} bytes, checksum={checksum[:16]}...)")
 
+        # Look up uploader username for targeted WebSocket notification
+        uploader = db.query(User).filter(User.id == attachment.uploader_id).first()
+        uploader_username = uploader.username if uploader else None
+
         # Emit event for WebSocket notification
         await event_bus.emit('attachment.ready', {
             'attachment_id': attachment_id,
             'uploader_id': attachment.uploader_id,
+            'uploader_username': uploader_username,
             'filename': attachment.filename,
             'content_type': attachment.content_type,
             'file_size': attachment.file_size,
