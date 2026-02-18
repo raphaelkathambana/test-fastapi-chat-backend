@@ -2,7 +2,7 @@ from pydantic import BaseModel, field_validator
 from datetime import datetime
 from typing import Optional, List
 import re
-from app.models.models import VehicleStatus, SectionType
+from app.models.models import VehicleStatus, SectionType, AttachmentStatus
 
 
 class UserCreate(BaseModel):
@@ -104,11 +104,34 @@ class VehicleResponse(BaseModel):
         from_attributes = True
 
 
+# Attachment schemas (before CommentResponse since it references AttachmentResponse)
+class AttachmentResponse(BaseModel):
+    id: str
+    comment_id: Optional[int] = None
+    uploader_id: int
+    filename: str
+    content_type: str
+    file_size: int
+    status: AttachmentStatus
+    checksum_sha256: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # Comment schemas
 class CommentCreate(BaseModel):
     vehicle_id: int
     section: SectionType
     content: str
+
+
+class CommentCreateWithAttachments(BaseModel):
+    vehicle_id: int
+    section: SectionType
+    content: str
+    attachment_ids: Optional[List[str]] = None
 
 
 class CommentResponse(BaseModel):
@@ -120,6 +143,7 @@ class CommentResponse(BaseModel):
     content: str
     created_at: datetime
     mentioned_users: Optional[List[str]] = []
+    attachments: Optional[List[AttachmentResponse]] = []
 
     class Config:
         from_attributes = True
@@ -136,6 +160,57 @@ class NotificationResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Chunked upload schemas
+class ChunkedUploadInitRequest(BaseModel):
+    filename: str
+    content_type: str
+    total_size: int
+    total_chunks: int
+
+    @field_validator('filename')
+    @classmethod
+    def validate_filename(cls, v: str) -> str:
+        """Sanitize filename — strip path components, limit characters."""
+        import os
+        v = os.path.basename(v)
+        v = re.sub(r'[^\w\s\-.]', '_', v)
+        if len(v) > 255:
+            name, ext = os.path.splitext(v)
+            v = name[:255 - len(ext)] + ext
+        if not v or v.startswith('.'):
+            raise ValueError('Invalid filename')
+        return v
+
+    @field_validator('total_size')
+    @classmethod
+    def validate_total_size(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError('File size must be positive')
+        if v > 200 * 1024 * 1024:  # 200MB max
+            raise ValueError('File size exceeds 200MB limit')
+        return v
+
+    @field_validator('total_chunks')
+    @classmethod
+    def validate_total_chunks(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError('Total chunks must be positive')
+        if v > 2000:  # 2000 chunks max (100KB each = 200MB)
+            raise ValueError('Too many chunks')
+        return v
+
+
+class ChunkedUploadInitResponse(BaseModel):
+    upload_id: str
+    upload_session: str
+    total_chunks: int
+
+
+class ChunkedUploadCompleteResponse(BaseModel):
+    attachment: AttachmentResponse
+    message: str
 
 
 # Section info schema

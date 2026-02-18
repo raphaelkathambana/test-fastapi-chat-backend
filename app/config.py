@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     # JWT configuration
     access_token_expire_minutes: int = 30
 
+    # File storage configuration
+    storage_backend: str = "local"  # "local" or "s3" (future)
+    storage_local_path: str = "./uploads"
+    storage_max_file_size: int = 200 * 1024 * 1024  # 200MB
+    storage_chunk_size: int = 100 * 1024  # 100KB per chunk
+    storage_orphan_ttl_minutes: int = 60  # Clean up orphaned uploads after 1 hour
+
     class Config:
         env_file = ".env"
         case_sensitive = False

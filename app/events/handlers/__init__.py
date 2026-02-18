@@ -8,5 +8,6 @@ Import this module to register all event handlers at application startup.
 # The @event_bus.on() decorators register handlers automatically on import
 from app.events.handlers import notifications
 from app.events.handlers import websocket_broadcast
+from app.events.handlers import attachment_events
 
-__all__ = ['notifications', 'websocket_broadcast']
+__all__ = ['notifications', 'websocket_broadcast', 'attachment_events']
